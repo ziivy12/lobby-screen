@@ -155,7 +155,7 @@ const GRADES = [[5, 'الصف الخامس'], [6, 'الصف السادس'], [7, 
 // التوقيت الشتوي من 1 نوفمبر حتى 25 مارس 2027
 const PERIODS = [['7:35', '8:15'], ['8:20', '9:00'], ['9:05', '9:45'], ['9:50', '10:30'], ['10:55', '11:35'], ['11:40', '12:20'], ['12:25', '13:05'], ['13:10', '13:50']];
 const PARTS = ['video/v0.mp4', 'video/v1.mp4', 'video/v2.mp4', 'video/v3.mp4'];
-const GRADE_SECONDS = 10, KEY = 'lobby-screen-data';
+const GRADE_SECONDS = 15, KEY = 'lobby-screen-data';
 const $ = id => document.getElementById(id);
 const el = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
 const pad = n => String(n).padStart(2, '0');
@@ -273,7 +273,8 @@ DAYS.forEach((d, i) => {
   [0, 1, 2].forEach(n => { const inp = el('input', null, r); inp.id = `duty-${d}-${n}`; inp.setAttribute('aria-label', `${DAY_NAMES[i]}: المادة ${n + 1}`); });
 });
 // كل المعلمين في القائمتين، مرتبين أبجدياً
-const NAMES = TEACHERS.map(t => String(t.name)).sort((a, b) => a.localeCompare(b, 'ar'));
+const bare = n => n.replace(/^E\s+/, '');   // الترتيب بالاسم نفسه ليأتي المعلمان متجاورين
+const NAMES = TEACHERS.map(t => String(t.name)).sort((a, b) => bare(a).localeCompare(bare(b), 'ar') || a.length - b.length);
 ['bus1', 'bus2'].forEach(id => {
   el('option', null, $(id), 'اختر المعلم').value = '';
   NAMES.forEach(n => { el('option', null, $(id), n.replace(/^E\s+(.*)/, '$1 E')).value = n; });
