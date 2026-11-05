@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>شاشة مدخل زياد</title>
+<style>
+  /* لوحة التحكم فوق/تحت معاينة الشاشة، وزر ملء الشاشة يترك الشاشة وحدها */
+  @font-face { font-family: 'ThmSans'; src: url('fonts/thmanyahsans-Medium.otf'); font-weight: 500; }
+  @font-face { font-family: 'ThmSans'; src: url('fonts/thmanyahsans-Bold.otf'); font-weight: 700; }
+  @font-face { font-family: 'ThmSerif'; src: url('fonts/thmanyahserifdisplay-Bold.otf'); font-weight: 700; }
+  :root { color-scheme: dark; --teal: #1AA7B5; --tealL: #7FE0E6; --navy: #1E3A5F; --deep: #0A1C2E; --gold: #D8B46A; --line: rgba(127,224,230,.18); --paper: #0D2436; --fg: #F2F7F9; --muted: #A9C1CC; }
+  body { margin: 0; background: var(--deep); color: var(--fg); font-family: 'ThmSans', Tahoma, sans-serif; font-weight: 500; direction: rtl; }
+  #app { max-width: 1240px; margin: 0 auto; padding-block: 16px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; }
+  #bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  #bar h1 { margin: 0; font-family: 'ThmSerif', serif; font-size: 28px; }
+  button { font: inherit; font-weight: 700; border: 0; border-radius: 10px; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--tealL); outline-offset: 2px; }
+  #fs { display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px; background: var(--gold); color: var(--deep); font-size: 18px; }
+
+  #frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #000; }
+  #frame.kiosk { position: fixed; inset: 0; width: auto; aspect-ratio: auto; border-radius: 0; z-index: 50; cursor: none; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: linear-gradient(135deg, #0F2F4A, var(--deep)); color: #fff; }
+  /* الفيديو كامل بدون تغطية: 1280×720 يسار الشاشة، واللوحات يمينه وأسفله */
+  video { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; background: var(--deep); }
+  #side { position: absolute; right: 0; top: 0; width: 640px; height: 720px; box-sizing: border-box; padding: 22px 26px 12px; display: flex; flex-direction: column; gap: 14px; }
+  #bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 360px; box-sizing: border-box; padding: 10px 20px 14px; display: grid; gap: 5px; transition: opacity .4s ease; }
+  /* في العطلة يأخذ الفيديو الشاشة كاملة */
+  .off video { width: 1920px; height: 1080px; }
+  .off #side, .off #bottom { display: none; }
+
+  .now-box { flex: none; height: 226px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .when { flex: none; }
+  .when .day { font-family: 'ThmSerif'; font-weight: 700; font-size: 44px; line-height: 1.15; }
+  .when .date { font-size: 25px; color: var(--tealL); }
+  .when .clock { direction: ltr; text-align: right; font-weight: 700; font-size: 60px; line-height: 1.15; margin-top: 6px; }
+  .when .period { font-weight: 700; font-size: 25px; color: var(--gold); min-height: 32px; }
+  .brand { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .b-name { margin-top: 4px; font-weight: 700; font-size: 40px; line-height: 1.2; white-space: nowrap; }
+  .b-tag { font-size: 23px; line-height: 1.3; color: var(--gold); white-space: nowrap; }
+  /* شعار اللجنة الإعلامية: يفتح الكتاب، يكتمل القوس، وتلتقط العدسة لقطة، كل 12 ثانية */
+  .brand .mark { flex: none; width: 216px; height: 142px; overflow: visible; }
+  .m-dark, .m-teal, .m-arc, .m-lens, .m-iris, .m-glint { animation: 12s ease-in-out infinite; }
+  .m-dark { transform-origin: 500px 642px; animation-name: m-dark; }
+  .m-teal { transform-origin: 500px 642px; animation-name: m-teal; }
+  .m-arc { stroke-dasharray: 1; animation-name: m-arc; }
+  .m-lens, .m-iris { transform-origin: 500px 300px; }
+  .m-lens { animation-name: m-lens; }
+  .m-iris { animation-name: m-iris; }
+  .m-glint { transform-origin: 500px 300px; animation-name: m-glint; }
+  @keyframes m-dark { 0%, 100% { transform: scaleX(.8); } 9%, 91% { transform: scaleX(1); } }
+  @keyframes m-teal { 0%, 3%, 97%, 100% { transform: scaleX(.72) scaleY(.92); } 13%, 87% { transform: none; } }
+  @keyframes m-arc { 0%, 5% { stroke-dashoffset: 1; } 20%, 86% { stroke-dashoffset: 0; } 97%, 100% { stroke-dashoffset: 1; } }
+  @keyframes m-lens { 0%, 44%, 58%, 100% { transform: none; } 48% { transform: scale(.93); } 52% { transform: scale(1.05); } }
+  @keyframes m-iris { 0%, 44%, 60%, 100% { transform: none; } 48% { transform: scale(.55); } 53% { transform: scale(1.15); } }
+  @keyframes m-glint { 0%, 44%, 100% { transform: none; opacity: 1; } 48% { opacity: .2; } 56% { transform: rotate(150deg); opacity: 1; } 70%, 92% { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .m-dark, .m-teal, .m-arc, .m-lens, .m-iris, .m-glint { animation: none; } }
+  .panel { border-radius: 16px; background: rgba(255,255,255,.07); border: 2px solid var(--line); padding: 12px 18px; box-sizing: border-box; }
+  .panel h2 { margin: 0 0 6px; font-weight: 700; font-size: 27px; color: var(--gold); }
+  #bus, #duty { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #bus .names { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #bus .name, #duty .subject { display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 12px; background: var(--navy); font-weight: 700; line-height: 1.12; }
+  #bus .name { font-size: 34px; padding: 0 8px; }
+  #duty .subjects { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  #duty .subject { flex: 1; min-height: 0; font-size: 31px; color: var(--tealL); }
+
+  .c { display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; border-radius: 7px; background: rgba(255,255,255,.08); font-size: 25px; padding: 0 4px; min-width: 0; overflow: hidden; }
+  .c.h { background: var(--teal); font-weight: 700; font-size: 25px; gap: 10px; }
+  .c.h small { font-size: 20px; font-weight: 500; direction: ltr; }
+  .c.g { background: var(--navy); font-weight: 700; font-size: 26px; }
+  .c.r { background: var(--navy); color: var(--tealL); font-weight: 700; font-size: 27px; }
+  /* الحصة الجارية: أسماء معلميها مظللة بالذهبي */
+  .c.now, .c.h.now { background: var(--gold); color: var(--deep); font-weight: 700; }
+
+  #edit { display: grid; grid-template-columns: 1fr 1.7fr; gap: 14px; }
+  #edit[hidden] { display: none; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  .card h2 { margin: 0 0 12px; font-size: 21px; color: var(--gold); }
+  .fields { display: flex; flex-direction: column; gap: 10px; }
+  label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 15px; }
+  * { box-sizing: border-box; }
+  input, select { font: inherit; font-size: 17px; color: var(--fg); background: #123047; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-width: 0; width: 100%; box-sizing: border-box; }
+  .dayrow { display: grid; grid-template-columns: 76px repeat(3, 1fr); gap: 8px; align-items: center; }
+  .dayrow b { font-size: 17px; }
+  #save-row { grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  #pwLabel { width: 260px; max-width: 100%; }
+  #save { padding: 12px 34px; background: var(--teal); color: #fff; font-size: 18px; }
+  #msg { font-size: 16px; color: var(--tealL); }
+  @media (max-width: 760px) {
+    #edit { grid-template-columns: 1fr; }
+    .dayrow { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <h1>شاشة المدخل</h1>
+    <button id="fs" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg>ملء الشاشة</button>
+  </div>
+  <div id="frame">
+    <div id="stage">
+      <video id="a" muted playsinline preload="auto"></video>
+      <video id="b" muted playsinline preload="auto"></video>
+      <aside id="side">
+        <div class="now-box">
+          <div class="when"><div class="day" id="day"></div><div class="date" id="date"></div><div class="clock" id="clock"></div><div class="period" id="period"></div></div>
+          <div class="brand">
+          <svg class="mark"viewBox="-10 -10 1020 670" role="img" aria-label="شعار اللجنة الإعلامية">
+            <defs>
+              <path id="darkL" d="M8,196 C45,186 82,190 112,200 L112,402 C252,420 378,490 452,642 C368,566 200,512 8,512 Z"/>
+              <path id="tealL" d="M138,88 C205,104 262,140 308,192 L420,300 L418,476 C462,500 478,572 481,642 C405,515 268,428 138,404 Z"/>
+              <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650">
+                <rect width="1000" height="650" fill="#fff"/>
+                <use href="#darkL" fill="none" stroke="#000" stroke-width="50"/>
+                <use href="#darkL" transform="matrix(-1 0 0 1 1000 0)" fill="none" stroke="#000" stroke-width="50"/>
+                <circle cx="500" cy="300" r="212" fill="#000"/>
+              </mask>
+            </defs>
+            <g mask="url(#gap)"><g class="m-teal" fill="#1AA7B5"><use href="#tealL"/><use href="#tealL" transform="matrix(-1 0 0 1 1000 0)"/></g></g>
+            <g class="m-dark" fill="#fff"><use href="#darkL"/><use href="#darkL" transform="matrix(-1 0 0 1 1000 0)"/></g>
+            <path class="m-arc" pathLength="1" d="M315,135 A235,235 0 0 1 685,135" fill="none" stroke="#D8B46A" stroke-width="60"/>
+            <g class="m-lens">
+              <circle cx="500" cy="300" r="155" fill="#fff"/>
+              <circle cx="500" cy="300" r="124" fill="#14385C"/>
+              <g class="m-iris"><circle cx="500" cy="300" r="74" fill="#7FE0E6"/><circle cx="500" cy="300" r="52" fill="#14385C"/></g>
+              <circle class="m-glint" cx="538" cy="258" r="30" fill="#fff"/>
+            </g>
+          </svg>
+          <div class="b-name">اللجنة الإعلامية</div>
+          <div class="b-tag">نرصد الإبداع ونروي الأثر</div>
+          </div>
+        </div>
+        <section class="panel" id="bus"><h2>مناوبة الحافلات</h2><div class="names" id="busNames"></div></section>
+        <section class="panel" id="duty"><h2>مناوبة المادة</h2><div class="subjects" id="dutySubjects"></div></section>
+      </aside>
+      <section id="bottom"></section>
+    </div>
+  </div>
+  <form id="edit">
+    <div class="card"><h2>مناوبة الحافلات</h2><div class="fields">
+      <label for="bus1">المعلم الأول<select id="bus1"></select></label>
+      <label for="bus2">المعلم الثاني<select id="bus2"></select></label>
+    </div></div>
+    <div class="card"><h2>مناوبة المادة</h2><div class="fields" id="dutyForm"></div></div>
+    <div id="save-row"><label for="pw" id="pwLabel">كلمة المرور<input id="pw" type="password" autocomplete="current-password"></label><button id="save" type="submit">حفظ</button><span id="msg" role="status"></span></div>
+  </form>
+</div>
+
+<script src="schedule.js"></script>
+<script>
+const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu'], DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+const ORD = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة'];
+const GRADES = [[5, 'الصف الخامس'], [6, 'الصف السادس'], [7, 'الصف السابع'], [8, 'الصف الثامن']];
+// التوقيت الشتوي من 1 نوفمبر حتى 25 مارس 2027
+const PERIODS = [['7:35', '8:15'], ['8:20', '9:00'], ['9:05', '9:45'], ['9:50', '10:30'], ['10:55', '11:35'], ['11:40', '12:20'], ['12:25', '13:05'], ['13:10', '13:50']];
+const PARTS = ['video/v0.mp4', 'video/v1.mp4', 'video/v2.mp4', 'video/v3.mp4'];
+const GRADE_SECONDS = 10, KEY = 'lobby-screen-data';
+const $ = id => document.getElementById(id);
+const el = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const pad = n => String(n).padStart(2, '0');
+const mins = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+const time12 = s => { const [h, m] = s.split(':'); return `${+h % 12 || 12}:${m}`; };
+// «E» يميز المعلمَين في الجدول، والاسم الأوسط يُحذف ليتسع السطر
+const short = name => { const w = String(name).replace(/^E\s+/, '').trim().split(/\s+/); return w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(' '); };
+
+/* ---------- القياس وملء الشاشة ---------- */
+const frame = $('frame'), stage = $('stage');
+function fit() {
+  const W = frame.clientWidth, H = frame.clientHeight, k = Math.min(W / 1920, H / 1080);
+  stage.style.transform = `translate(${(W - 1920 * k) / 2}px, ${(H - 1080 * k) / 2}px) scale(${k})`;
+}
+new ResizeObserver(fit).observe(frame);
+function leaveKiosk() { frame.classList.remove('kiosk'); }
+$('fs').addEventListener('click', () => {
+  frame.classList.add('kiosk');
+  if (frame.requestFullscreen) frame.requestFullscreen().catch(() => {});
+  if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) leaveKiosk(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && !document.fullscreenElement) leaveKiosk(); });
+
+/* ---------- الفيديو: أجزاء متتالية بلا توقف ---------- */
+const vids = [$('a'), $('b')];
+let part = 0, cur = 0;
+vids.forEach((v, n) => {
+  v.muted = true;
+  v.addEventListener('ended', () => {
+    if (n !== cur) return;
+    const next = vids[1 - cur];
+    part = (part + 1) % PARTS.length;
+    next.style.zIndex = 2; v.style.zIndex = 1;
+    next.play().catch(() => {});
+    cur = 1 - cur;
+    v.src = PARTS[(part + 1) % PARTS.length]; v.load();
+  });
+});
+vids[0].src = PARTS[0]; vids[1].src = PARTS[1]; vids[0].style.zIndex = 2;
+vids[0].play().catch(() => {});
+setInterval(() => { if (vids[cur].paused && !vids[cur].ended) vids[cur].play().catch(() => {}); }, 5000);
+
+/* ---------- البيانات ---------- */
+let DATA = { bus: [], duty: {} };
+try { const c = JSON.parse(localStorage.getItem(KEY)); if (c) DATA = c; } catch (e) {}
+
+function drawBus() {
+  const b = $('busNames'); b.textContent = '';
+  (DATA.bus || []).filter(Boolean).slice(0, 2).forEach(n => el('div', 'name', b, short(n)));
+  $('bus').style.visibility = b.children.length ? '' : 'hidden';
+}
+function drawDuty(day) {
+  const b = $('dutySubjects'), list = ((DATA.duty || {})[day] || []).filter(Boolean);
+  b.textContent = '';
+  list.forEach(s => el('div', 'subject', b, s));
+  $('duty').style.visibility = list.length ? '' : 'hidden';
+}
+
+/* ---------- جدول اليوم ---------- */
+function dayGrid(day) {
+  const g = {};
+  TEACHERS.forEach(t => Object.entries(t.schedule[day] || {}).forEach(([p, cell]) => {
+    const [sec, gr] = cell.split('/').map(Number);
+    ((g[gr] = g[gr] || {})[sec] = g[gr][sec] || {})[p] = t.name;
+  }));
+  return g;
+}
+function currentPeriod() {
+  const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+  return PERIODS.findIndex(([a, b]) => m >= mins(a) && m <= mins(b)) + 1;
+}
+function drawGrade(day, i) {
+  const [gr, label] = GRADES[i], secs = dayGrid(day)[gr] || {}, cur = currentPeriod(), box = $('bottom');
+  const ids = Object.keys(secs).map(Number).sort((a, b) => a - b);
+  box.textContent = '';
+  box.style.gridTemplateColumns = '184px repeat(8, 1fr)'; box.style.gridTemplateRows = `46px repeat(${ids.length}, 1fr)`;
+  el('div', 'c g', box, label);
+  ORD.forEach((o, n) => { const h = el('div', 'c h' + (cur === n + 1 ? ' now' : ''), box, o); el('small', null, h, cur === n + 1 ? 'الآن' : time12(PERIODS[n][0])); });
+  ids.forEach(sec => {
+    el('div', 'c r', box, `${sec}/${gr}`);
+    for (let p = 1; p <= 8; p++) el('div', 'c' + (cur === p ? ' now' : ''), box, short(secs[sec][p] || ''));
+  });
+}
+function tick() {
+  const d = new Date(), day = DAYS[d.getDay()], cur = currentPeriod();
+  stage.classList.toggle('off', !day);
+  $('clock').textContent = `${pad(d.getHours() % 12 || 12)}:${pad(d.getMinutes())}`;
+  $('period').textContent = cur ? `الحصة ${ORD[cur - 1]}` : '';
+  $('day').textContent = new Intl.DateTimeFormat('ar-OM', { weekday: 'long' }).format(d);
+  $('date').textContent = new Intl.DateTimeFormat('ar-OM-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+  return day;
+}
+let grade = 0;
+function cycle() {
+  const day = tick();
+  if (!day) return;
+  drawDuty(day);
+  drawGrade(day, grade);
+}
+drawBus(); cycle();
+setInterval(tick, 10000);
+setInterval(() => {
+  $('bottom').style.opacity = 0;
+  setTimeout(() => { grade = (grade + 1) % GRADES.length; cycle(); $('bottom').style.opacity = 1; }, 450);
+}, GRADE_SECONDS * 1000);
+
+/* ---------- خانات التعديل ---------- */
+DAYS.forEach((d, i) => {
+  const r = el('div', 'dayrow', $('dutyForm'));
+  el('b', null, r, DAY_NAMES[i]);
+  [0, 1, 2].forEach(n => { const inp = el('input', null, r); inp.id = `duty-${d}-${n}`; inp.setAttribute('aria-label', `${DAY_NAMES[i]}: المادة ${n + 1}`); });
+});
+// كل المعلمين في القائمتين، مرتبين أبجدياً
+const NAMES = [...new Set(TEACHERS.map(t => String(t.name).replace(/^E\s+/, '')))].sort((a, b) => a.localeCompare(b, 'ar'));
+['bus1', 'bus2'].forEach(id => {
+  el('option', null, $(id), 'اختر المعلم').value = '';
+  NAMES.forEach(n => { el('option', null, $(id), n).value = n; });
+});
+function pick(id, name) {
+  const s = $(id);
+  if (name && !NAMES.includes(name) && ![...s.options].some(o => o.value === name)) el('option', null, s, name).value = name;
+  s.value = name || '';
+}
+let dirty = false;
+$('edit').addEventListener('input', () => { dirty = true; $('msg').textContent = ''; });
+function fillForm() {
+  pick('bus1', (DATA.bus || [])[0]); pick('bus2', (DATA.bus || [])[1]);
+  DAYS.forEach(d => [0, 1, 2].forEach(n => { $(`duty-${d}-${n}`).value = ((DATA.duty || {})[d] || [])[n] || ''; }));
+}
+function readForm() {
+  const duty = {};
+  DAYS.forEach(d => { duty[d] = [0, 1, 2].map(n => $(`duty-${d}-${n}`).value.trim()).filter(Boolean); });
+  return { bus: [$('bus1').value.trim(), $('bus2').value.trim()], duty };
+}
+function apply(data) {
+  DATA = data;
+  try { localStorage.setItem(KEY, JSON.stringify(DATA)); } catch (e) {}
+  drawBus(); cycle();
+  if (!dirty) fillForm();
+}
+
+/* ---------- الحفظ والقراءة ---------- */
+const API = 'https://ndivzngrcfqasrrnbqpc.supabase.co/rest/v1';
+const API_KEY = 'sb_publishable_MTvYpnPzklb7ZXlTWj15VA_6vOChQQ0';   // مفتاح عام للقراءة، والكتابة محمية بكلمة المرور
+const HEAD = { apikey: API_KEY, 'content-type': 'application/json' };
+const rpc = (fn, body) => fetch(`${API}/rpc/${fn}`, { method: 'POST', headers: HEAD, body: JSON.stringify(body) })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+async function load() {
+  try {
+    const r = await fetch(`${API}/screen?id=eq.1&select=bus,duty`, { headers: HEAD });
+    if (!r.ok) return;
+    const [row] = await r.json();
+    if (row) apply(row);
+  } catch (e) {}   // عند انقطاع الإنترنت تبقى آخر بيانات وصلت
+}
+const SAVE_MSG = { wrong: 'كلمة المرور غير صحيحة.', locked: 'محاولات كثيرة خاطئة. انتظر 10 دقائق ثم حاول.', invalid: 'البيانات المدخلة غير صالحة.', no_password: 'أنشئ كلمة مرور أولاً.' };
+let hasPassword = true;
+fillForm();
+load();
+setInterval(load, 30000);
+rpc('screen_has_password', {}).then(v => {
+  hasPassword = v;
+  if (!v) { $('pwLabel').firstChild.textContent = 'أنشئ كلمة مرور للتعديل (6 أحرف على الأقل)'; $('pw').autocomplete = 'new-password'; }
+}).catch(() => {});
+$('edit').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('save'), data = readForm(), pw = $('pw').value;
+  if (!pw) { $('msg').textContent = 'اكتب كلمة المرور.'; return; }
+  btn.disabled = true; $('msg').textContent = 'جارٍ الحفظ…';
+  try {
+    if (!hasPassword) {
+      const made = await rpc('screen_set_password', { p_new: pw });
+      if (made === 'invalid') throw new Error('short');
+      hasPassword = true;
+      $('pwLabel').firstChild.textContent = 'كلمة المرور';
+    }
+    const res = await rpc('screen_save', { p_password: pw, p_bus: data.bus, p_duty: data.duty });
+    if (res === 'ok') { dirty = false; apply(data); $('msg').textContent = 'تم الحفظ، والشاشة تحدّثت.'; }
+    else $('msg').textContent = SAVE_MSG[res] || 'لم يتم الحفظ.';
+  } catch (err) {
+    $('msg').textContent = err.message === 'short' ? 'كلمة المرور قصيرة: 6 أحرف على الأقل.' : 'لم يتم الحفظ. تأكد من الاتصال وحاول مرة ثانية.';
+  }
+  btn.disabled = false;
+});
+</script>
+
+</body>
+</html>
