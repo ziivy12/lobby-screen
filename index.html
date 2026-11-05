@@ -164,7 +164,7 @@ const time12 = s => { const [h, m] = s.split(':'); return `${+h % 12 || 12}:${m}
 // الاسم الأوسط يُحذف ليتسع السطر، و«E» تبقى لتميّز معلم الإنجليزي ابراهيم السعدي عن معلم الإسلامية
 const short = name => {
   const s = String(name).trim(), e = /^E\s+/.test(s), w = s.replace(/^E\s+/, '').split(/\s+/);
-  return (e ? 'E ' : '') + (w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(' '));
+  return (w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(' ')) + (e ? ' E' : '');
 };
 
 /* ---------- القياس وملء الشاشة ---------- */
@@ -276,7 +276,7 @@ DAYS.forEach((d, i) => {
 const NAMES = TEACHERS.map(t => String(t.name)).sort((a, b) => a.localeCompare(b, 'ar'));
 ['bus1', 'bus2'].forEach(id => {
   el('option', null, $(id), 'اختر المعلم').value = '';
-  NAMES.forEach(n => { el('option', null, $(id), n).value = n; });
+  NAMES.forEach(n => { el('option', null, $(id), n.replace(/^E\s+(.*)/, '$1 E')).value = n; });
 });
 function pick(id, name) {
   const s = $(id);
