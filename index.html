@@ -26,9 +26,6 @@
   video { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; background: var(--deep); }
   #side { position: absolute; right: 0; top: 0; width: 640px; height: 720px; box-sizing: border-box; padding: 22px 26px 12px; display: flex; flex-direction: column; gap: 14px; }
   #bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 360px; box-sizing: border-box; padding: 10px 20px 14px; display: grid; gap: 5px; transition: opacity .4s ease; }
-  /* في العطلة يأخذ الفيديو الشاشة كاملة */
-  .off video { width: 1920px; height: 1080px; }
-  .off #side, .off #bottom { display: none; }
 
   .now-box { flex: none; height: 226px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
   .when { flex: none; }
@@ -207,13 +204,16 @@ let DATA = { bus: [], duty: {} };
 try { const c = JSON.parse(localStorage.getItem(KEY)); if (c) DATA = c; } catch (e) {}
 
 function drawBus() {
-  const b = $('busNames'); b.textContent = '';
+  const b = $('busNames'), open = DAYS[new Date().getDay()]; b.textContent = '';
+  // الجمعة والسبت: اللوحة ظاهرة وخاناتها فارغة
+  if (!open) { el('div', 'name', b); el('div', 'name', b); $('bus').style.visibility = ''; return; }
   (DATA.bus || []).filter(Boolean).slice(0, 2).forEach(n => el('div', 'name', b, short(n)));
   $('bus').style.visibility = b.children.length ? '' : 'hidden';
 }
 function drawDuty(day) {
   const b = $('dutySubjects'), list = ((DATA.duty || {})[day] || []).filter(Boolean);
   b.textContent = '';
+  if (!day) { [0, 1, 2].forEach(() => el('div', 'subject', b)); $('duty').style.visibility = ''; return; }
   list.forEach(s => el('div', 'subject', b, s));
   $('duty').style.visibility = list.length ? '' : 'hidden';
 }
@@ -229,10 +229,12 @@ function dayGrid(day) {
 }
 function currentPeriod() {
   const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+  if (!DAYS[d.getDay()]) return 0;
   return PERIODS.findIndex(([a, b]) => m >= mins(a) && m <= mins(b)) + 1;
 }
 function drawGrade(day, i) {
-  const [gr, label] = GRADES[i], secs = dayGrid(day)[gr] || {}, cur = currentPeriod(), box = $('bottom');
+  // الجمعة والسبت: نفس شعب الأحد لكن بدون أسماء
+  const [gr, label] = GRADES[i], secs = dayGrid(day || 'sun')[gr] || {}, cur = currentPeriod(), box = $('bottom');
   const ids = Object.keys(secs).map(Number).sort((a, b) => a - b);
   box.textContent = '';
   box.style.gridTemplateColumns = '184px repeat(8, 1fr)'; box.style.gridTemplateRows = `46px repeat(${ids.length}, 1fr)`;
@@ -240,12 +242,11 @@ function drawGrade(day, i) {
   ORD.forEach((o, n) => { const h = el('div', 'c h' + (cur === n + 1 ? ' now' : ''), box, o); el('small', null, h, cur === n + 1 ? 'الآن' : time12(PERIODS[n][0])); });
   ids.forEach(sec => {
     el('div', 'c r', box, `${sec}/${gr}`);
-    for (let p = 1; p <= 8; p++) el('div', 'c' + (cur === p ? ' now' : ''), box, short(secs[sec][p] || ''));
+    for (let p = 1; p <= 8; p++) el('div', 'c' + (cur === p ? ' now' : ''), box, day ? short(secs[sec][p] || '') : '');
   });
 }
 function tick() {
   const d = new Date(), day = DAYS[d.getDay()], cur = currentPeriod();
-  stage.classList.toggle('off', !day);
   $('clock').textContent = `${pad(d.getHours() % 12 || 12)}:${pad(d.getMinutes())}`;
   $('period').textContent = cur ? `الحصة ${ORD[cur - 1]}` : '';
   $('day').textContent = new Intl.DateTimeFormat('ar-OM', { weekday: 'long' }).format(d);
@@ -255,7 +256,7 @@ function tick() {
 let grade = 0;
 function cycle() {
   const day = tick();
-  if (!day) return;
+  drawBus();
   drawDuty(day);
   drawGrade(day, grade);
 }
