@@ -270,7 +270,7 @@ function tick() {
   $('day').textContent = new Intl.DateTimeFormat('ar-OM', { weekday: 'long' }).format(d);
   $('date').textContent = new Intl.DateTimeFormat('ar-OM-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
   // أول ما تبدأ حصة أو يتغير اليوم يتحدث الجدول فوراً، بدون انتظار تنقل الصف
-  const key = day + cur;
+  const key = `${day}|${cur}`;   // نص ثابت: في الجمعة والسبت day غير معرّف، وجمعه مع رقم يعطي NaN لا يساوي نفسه
   if (lastKey !== null && key !== lastKey) { lastKey = key; cycle(); }
   lastKey = key;
   return day;
